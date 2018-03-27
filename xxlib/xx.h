@@ -12,6 +12,7 @@
 #include <type_traits>
 #include <string>
 #include <iostream>
+#include <chrono>
 
 #ifdef _WIN32
 #include <intrin.h>     // _BitScanReverse  64
@@ -87,6 +88,78 @@ Label##n:					\
 goto Label##n
 
 
+
+/***********************************************************************************/
+// Stopwatch
+/***********************************************************************************/
+
+namespace xx
+{
+	struct Stopwatch
+	{
+		Stopwatch() { Reset(); }
+		inline void Reset() { beginTime = std::chrono::high_resolution_clock::now(); }
+		inline int64_t operator()()
+		{
+			auto bak = beginTime;
+			Reset();
+			return std::chrono::duration_cast<std::chrono::milliseconds>(beginTime - bak).count();
+		}
+		inline int64_t micros()
+		{
+			auto bak = beginTime;
+			Reset();
+			return std::chrono::duration_cast<std::chrono::microseconds>(beginTime - bak).count();
+		}
+	private:
+		std::chrono::time_point<std::chrono::high_resolution_clock> beginTime;
+	};
+}
+
+
+/************************************************************************************/
+// time_point <--> DateTime.Ticks converts
+/************************************************************************************/
+
+inline int64_t TimeSinceEpochToDateTimeTicks(int64_t const& val)
+{
+	return val + 621356256000000000LL;
+}
+
+inline int64_t TimePointToDateTimeTicks(std::chrono::system_clock::time_point const& val)
+{
+	return val.time_since_epoch().count() + 621356256000000000LL;
+}
+
+inline int64_t DateTimeTicksToTimeSinceEpoch(int64_t const& val)
+{
+	return val - 621356256000000000LL;
+}
+
+inline std::chrono::system_clock::time_point TimeSinceEpochToTimePoint(int64_t const& val)
+{
+	return std::chrono::system_clock::time_point(std::chrono::system_clock::time_point::duration(val));
+}
+
+inline std::chrono::system_clock::time_point DateTimeTicksToTimePoint(int64_t const& val)
+{
+	return TimeSinceEpochToTimePoint(val - 621356256000000000LL);
+}
+
+inline std::chrono::system_clock::time_point GetNowTimePoint()
+{
+	return std::chrono::system_clock::now();
+}
+
+inline int64_t GetNowTimeSinceEpoch()
+{
+	return GetNowTimePoint().time_since_epoch().count();
+}
+
+inline int64_t GetNowDateTimeTicks()
+{
+	return GetNowTimeSinceEpoch() + 621356256000000000LL;
+}
 
 
 

@@ -126,13 +126,17 @@ namespace xx
 	{
 	public:
 		std::function<void(BBuffer&)> OnReceivePackage;
+
+		// uint32_t: 流水号
 		std::function<void(uint32_t, BBuffer&)> OnReceiveRequest;
 
-		// 路由包, 增加了几个参数: 包长, 包offset, 地址offset( 以便直接从 地址offset修改 地址 后从 包offset 发送包长字节 )
-		std::function<void(BBuffer&, size_t, size_t, size_t)> OnReceiveRouterPackage;
-		std::function<void(uint32_t, BBuffer&, size_t, size_t, size_t)> OnReceiveRouterRequest;
+		// 4个 size_t 代表 包起始offset, 含包头的总包长, 地址起始偏移, 地址长度( 方便替换地址并 memcpy )
+		// BBuffer 的 offset 停在数据区起始位置
+		std::function<void(BBuffer&, size_t, size_t, size_t, size_t)> OnReceiveRoutingPackage;
 
 		std::function<void()> OnDispose;
+
+
 
 		UvLoop& loop;
 		size_t index_at_container = -1;
@@ -150,7 +154,7 @@ namespace xx
 		virtual size_t GetSendQueueSize() = 0;
 		virtual void SendBytes(char const* inBuf, int len = 0) = 0;
 
-		void ReceiveImpl(char const* bufPtr, int len);
+		virtual void ReceiveImpl(char const* bufPtr, int len);
 
 		void SendBytes(BBuffer& bb);
 
@@ -407,7 +411,7 @@ namespace xx
 		SendBytes(bbSend);
 	}
 	template<typename T>
-	inline void UvTcpUdpBase::SendRoutePackage(T const & pkg,uint32_t nParam,size_t nlen)
+	inline void UvTcpUdpBase::SendRoutePackage(T const & pkg, uint32_t nParam, size_t nlen)
 	{
 		if (!ptr) throw - 1;
 		bbSend.Clear();
