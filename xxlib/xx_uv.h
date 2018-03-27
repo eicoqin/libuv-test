@@ -166,6 +166,9 @@ namespace xx
 
 		template<typename T>
 		void SendResponse(uint32_t serial, T const& pkg);
+
+		template<typename T>
+		void SendRoutePackage(T const & pkg, uint32_t nParam, size_t nlen);
 	};
 
 	class UvTcpBase : public UvTcpUdpBase
