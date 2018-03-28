@@ -52,7 +52,7 @@ namespace xx
 		UvRpcManager* rpcMgr = nullptr;
 		UvTimer* udpTimer = nullptr;
 		uint32_t udpTicks = 0;
-		std::array<char,65536> udpRecvBuf;
+		std::array<char, 65536> udpRecvBuf;
 		uint32_t kcpInterval = 0;
 
 		explicit UvLoop(MemPool* mp);
@@ -166,7 +166,6 @@ namespace xx
 
 		template<typename T>
 		void SendResponse(uint32_t serial, T const& pkg);
-
 		template<typename T>
 		void SendRoutePackage(T const & pkg, uint32_t nParam, size_t nlen);
 	};
@@ -234,7 +233,7 @@ namespace xx
 	class UvTimeouter : public Object
 	{
 	public:
-		UvTimer* timer = nullptr;
+		UvTimer * timer = nullptr;
 		List<UvTimeouterBase*> timerss;
 		int cursor = 0;
 		int defaultInterval;
@@ -268,7 +267,7 @@ namespace xx
 	class UvRpcManager : public Object
 	{
 	public:
-		UvTimer* timer = nullptr;
+		UvTimer * timer = nullptr;
 		uint32_t serial = 0;
 		Dict<uint32_t, std::function<void(uint32_t, BBuffer const*)>> mapping;
 		Queue<std::pair<int, uint32_t>> serials;
@@ -286,7 +285,7 @@ namespace xx
 	class UvContextBase : public Object
 	{
 	public:
-		UvTcpUdpBase* peer = nullptr;
+		UvTcpUdpBase * peer = nullptr;
 
 		UvContextBase(MemPool* mp);
 		~UvContextBase();
@@ -333,7 +332,7 @@ namespace xx
 	class UvUdpPeer : public UvUdpBase
 	{
 	public:
-		UvUdpListener& listener;
+		UvUdpListener & listener;
 
 		UvUdpPeer(UvUdpListener& listener
 			, Guid const& g = Guid()
@@ -423,6 +422,7 @@ namespace xx
 		bbSend.EndWritePackage();
 		//修改包头
 		uint32_t ntypeid = 0;
+		auto offsetbak = bbSend.offset;
 		bbSend.Read(ntypeid);
 		ntypeid = ntypeid | 8;
 		ntypeid = ntypeid | nlen << 4;
@@ -430,7 +430,7 @@ namespace xx
 		bbSend.Reserve(bbSend.dataLen + nlen);
 		memmove(bbSend.buf + 3 + nlen, bbSend.buf + 3, bbSend.dataLen - 3);
 		memset(bbSend.buf + 3, 0, nlen);
-		bbSend.WriteAt(bbSend.offset + 3, nParam);
+		bbSend.WriteAt(offsetbak + 3, nParam);
 		bbSend.dataLen += nlen;
 		//
 		SendBytes(bbSend);
