@@ -70,7 +70,7 @@ public:
 	Client::Client(xx::UvTcpListener& listener) :xx::UvTcpPeer(listener)
 	{
 	}
-	void DisconnectImpl()
+	void DisconnectImpl() override
 	{
 		std::cout << "player disconnect.peer id:" << id << std::endl;
 		Release();
@@ -219,7 +219,9 @@ void f1()
 	gslistener->Listen();
 	uint64_t counter = 0;
 	gslistener->OnCreatePeer = [&]()->xx::UvTcpPeer* {
-		return new xx::UvTcpPeer(*gslistener);;
+		xx::UvTcpPeer* peer = nullptr;
+		mp.CreateTo(peer, *gslistener);
+		return peer;
 	};
 	gslistener->OnAccept = [&](xx::UvTcpPeer* peer) {
 		peer->OnReceiveRoutingPackage = [peer](xx::BBuffer& bb, size_t pkgOffset, size_t pkgLen, size_t addrOffset, size_t ddrLen) {
@@ -234,7 +236,9 @@ void f1()
 	listener->Bind("0.0.0.0", 12345);//
 	listener->Listen();
 	listener->OnCreatePeer = [&]()->xx::UvTcpPeer*{
-		return new Client(*listener);
+		Client* peer = nullptr;
+		mp.CreateTo(peer, *listener);
+		return peer;
 	};
 	uint64_t nPeerId = 1;
 	listener->OnAccept = [&nPeerId](xx::UvTcpPeer* peer){
@@ -266,6 +270,10 @@ int main()
 	mp.MPCreateTo(::clientMgr);
 	mp.MPCreateTo(::gameSrvMgr);
 	mp.MPCreateTo(::gateProtocolParser);
+	//
+	//GateProtocolParser* pp = new GateProtocolParser(&mp);
+	//pp->Release();
+	//
 	f1();
 	//---------------------------------------------------
 	std::cin.get();
