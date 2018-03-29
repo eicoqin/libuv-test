@@ -70,6 +70,11 @@ public:
 	Client::Client(xx::UvTcpListener& listener) :xx::UvTcpPeer(listener)
 	{
 	}
+	void DisconnectImpl()
+	{
+		std::cout << "player disconnect.peer id:" << id << std::endl;
+		Release();
+	}
 };
 
 class ClientMgr : public xx::Object
@@ -80,12 +85,12 @@ public:
 		: xx::Object(mp)
 	{
 	}
-	uint64_t peerIndex = 1;
+	uint64_t peerIndex = 0;
 	void Add(Client* peer)
 	{
 		peer->id = ++peerIndex;
 		//uint64_t id = peer->memHeader().versionNumber;
-		std::cout << "peer id:" << peer->id << std::endl;
+		std::cout << "player connect.peer id:" << peer->id << std::endl;
 		auto it = pool.find(peer->id);
 		if (it == pool.end())
 		{
@@ -101,11 +106,17 @@ public:
 		}
 		return it->second;
 	}
+	void Remove(Client* peer) 
+	{
+		auto it = pool.find(peer->id);
+		if (it == pool.end())
+			return;
+		pool.erase(it);
+	}
 };
 using ClientMgr_p = xx::Ptr<ClientMgr>;
 ClientMgr_p clientMgr;
 
-//消息处理函数
 //----------------------------------------------------------------------------------------------------
 //Gate消息处理
 class GateProtocolParser : public xx::Object
@@ -117,7 +128,7 @@ class GateProtocolParser : public xx::Object
 		RPC::Generic::Ping_p recvpkg;
 		int r = bb.ReadPackage(recvpkg);
 		if (r == 0) {
-			std::cout << "game server ping..........." << std::endl;
+			//std::cout << "game server ping..........." << std::endl;
 		}
 		else
 		{
@@ -130,6 +141,7 @@ class GateProtocolParser : public xx::Object
 		RPC::Generic::ServiceInfo_p recvpkg;
 		int r = bb.ReadPackage(recvpkg);
 		if (r == 0) {
+			std::cout << "game server register.id:" << recvpkg->serviceId << std::endl;
 			::gameSrvMgr->Add(recvpkg->serviceId, peer);
 			mempool->MPCreateTo(recvpkg);
 			recvpkg->serviceId = GATESERVER_ID;
@@ -148,14 +160,14 @@ public:
 		msgHandles[xx::TypeId_v<RPC::Generic::Ping>] = &GateProtocolParser::GSPing;
 		msgHandles[xx::TypeId_v<RPC::Generic::ServiceInfo>] = &GateProtocolParser::GSRegsiter;
 	}
-	void Parse(xx::UvTcpPeer* peer, xx::BBuffer& bb)
+	void Parse(xx::UvTcpPeer* peer, xx::BBuffer& bb) 
 	{
 		auto offset = bb.offset;
 		uint32_t id = 0; bb.Read(id);
 		bb.offset = offset;
 		bool bRet = (this->*msgHandles[id])(peer, bb);
 	}
-	void ParseRoutingPackage(xx::UvTcpPeer* peer, xx::BBuffer& bb, size_t pkgOffset, size_t pkgLen, size_t addrOffset, size_t ddrLen)
+	void ParseRoutingPackage(xx::UvTcpPeer* peer, xx::BBuffer& bb, size_t pkgOffset, size_t pkgLen, size_t addrOffset, size_t ddrLen) 
 	{
 		Client *pClient = dynamic_cast<Client *>(peer);
 
@@ -167,14 +179,14 @@ public:
 		{
 			memset(bb.buf + 3, 0, ddrLen);
 			bb.WriteAt(pkgOffset + 3, peerid);
-			pSrv->peer->SendBytes(bb.buf, bb.dataLen);
+			pSrv->peer->SendBytes(bb.buf,bb.dataLen);
 		}
 	}
 	void ParseRoutingPackageFromGS(xx::UvTcpPeer* peer, xx::BBuffer& bb, size_t pkgOffset, size_t pkgLen, size_t addrOffset, size_t ddrLen)
-	{
+	{	
 		//
 		xx::BBuffer bbSend(mempool);
-		bbSend.Resize(bb.dataLen);
+		bbSend.Resize(bb.dataLen );
 		memcpy(bbSend.buf, bb.buf, bb.dataLen);
 		bbSend.offset = 3;
 		bbSend.dataLen = bb.dataLen;
@@ -182,10 +194,10 @@ public:
 		bbSend.Read(gateUserId);
 		xx::UvTcpPeer* pSrv = ::clientMgr->Get(gateUserId);
 		if (pSrv)
-		{
+		{			
 			uint32_t ntypeid = 0;
 			memcpy(bbSend.buf, &ntypeid, 1);
-			memmove(bbSend.buf + 3, bbSend.buf + 3 + ddrLen, bbSend.dataLen - ddrLen - 3);
+			memmove(bbSend.buf + 3, bbSend.buf + 3+ ddrLen, bbSend.dataLen-ddrLen-3);
 			bbSend.dataLen -= ddrLen;
 			pSrv->SendBytes(bbSend.buf, bbSend.dataLen);
 		}
@@ -193,75 +205,6 @@ public:
 };
 using GateProtocolParser_p = xx::Ptr<GateProtocolParser>;
 GateProtocolParser_p gateProtocolParser;
-//----------------------------------------------------------------------------------------------------
-//Game消息处理
-class GameProtocolParser : public xx::Object
-{
-	typedef bool(GameProtocolParser::*OnMsgFunc)(xx::UvTcpClient* peer, xx::BBuffer& bb, uint64_t gateUserId);
-	std::array<OnMsgFunc, 0x000f> msgHandles;
-	bool GateRegsiter(xx::UvTcpClient* peer, xx::BBuffer& bb)
-	{
-		RPC::Generic::ServiceInfo_p recvpkg;
-		int r = bb.ReadPackage(recvpkg);
-		if (r == 0) {
-
-		}
-		else
-		{
-
-		}
-		return true;
-	};
-	bool GatePlayerLogin(xx::UvTcpClient* peer, xx::BBuffer& bb, uint64_t gateUserId)
-	{
-		RPC::Client_Login::Login_p recvpkg;
-		int r = bb.ReadPackage(recvpkg);
-		if (r == 0) {
-			RPC::Login_Client::LoginSuccess_p loginAck;
-			mempool->MPCreateTo(loginAck);
-			loginAck->id = 0;
-			peer->SendRoutePackage(loginAck, gateUserId, sizeof(gateUserId));
-		}
-		else
-		{
-
-		}
-		return true;
-	};
-public:
-	GameProtocolParser(xx::MemPool* _mp)
-		: Object(_mp)
-	{
-		msgHandles[xx::TypeId_v<RPC::Client_Login::Login>] = &GameProtocolParser::GatePlayerLogin;
-	}
-	void Parse(xx::UvTcpClient* peer, xx::BBuffer& bb) {
-		auto offset = bb.offset;
-		uint32_t id = 0; bb.Read(id);
-		bb.offset = offset;
-		switch (id)
-		{
-		case xx::TypeId_v<RPC::Generic::ServiceInfo>:
-		{
-			GateRegsiter(peer, bb);
-		}break;
-		}
-	}
-	void ParseRoutingPackage(xx::UvTcpClient* peer, xx::BBuffer& bb, size_t pkgOffset, size_t pkgLen, size_t addrOffset, size_t ddrLen)
-	{
-		auto offsetbak = bb.offset;
-		bb.offset -= ddrLen;
-		uint64_t gateUserId = 0;bb.Read(gateUserId);
-		bb.offset = offsetbak;
-		uint32_t id = 0; bb.Read(id);
-		bb.offset = offsetbak;
-		bool bRet = (this->*msgHandles[id])(peer, bb, gateUserId);
-		//
-	}
-
-};
-using GameProtocolParser_p = xx::Ptr<GameProtocolParser>;
-GameProtocolParser_p gameProtocolParser;
-//----------------------------------------------------------------------------------------------------
 void f1()
 {
 	// gate server
@@ -280,7 +223,7 @@ void f1()
 	};
 	gslistener->OnAccept = [&](xx::UvTcpPeer* peer) {
 		peer->OnReceiveRoutingPackage = [peer](xx::BBuffer& bb, size_t pkgOffset, size_t pkgLen, size_t addrOffset, size_t ddrLen) {
-			::gateProtocolParser->ParseRoutingPackageFromGS(peer, bb, pkgOffset, pkgLen, addrOffset, ddrLen);
+			::gateProtocolParser->ParseRoutingPackageFromGS(peer, bb,pkgOffset,pkgLen,addrOffset,ddrLen);
 		};
 		peer->OnReceivePackage = [peer](xx::BBuffer& bb) {
 			::gateProtocolParser->Parse(peer, bb);
@@ -290,74 +233,32 @@ void f1()
 	auto listener = loop.CreateTcpListener();
 	listener->Bind("0.0.0.0", 12345);//
 	listener->Listen();
-	listener->OnCreatePeer = [&]()->xx::UvTcpPeer* {
+	listener->OnCreatePeer = [&]()->xx::UvTcpPeer*{
 		return new Client(*listener);
 	};
 	uint64_t nPeerId = 1;
-	listener->OnAccept = [&nPeerId](xx::UvTcpPeer* peer) {
+	listener->OnAccept = [&nPeerId](xx::UvTcpPeer* peer){
 		//
 		Client *pClient = dynamic_cast<Client *>(peer);
 		clientMgr->Add(pClient);
 		//
-		peer->OnReceivePackage = [peer](xx::BBuffer& bb) {
+		peer->OnReceivePackage = [peer](xx::BBuffer& bb){
 			::gateProtocolParser->Parse(peer, bb);
 		};
-		peer->OnReceiveRequest = [peer](uint32_t serial, xx::BBuffer& bb) {
+		peer->OnReceiveRequest = [peer](uint32_t serial, xx::BBuffer& bb){
 		};
-		peer->OnReceiveRoutingPackage = [peer](xx::BBuffer& bb, size_t pkgOffset, size_t pkgLen, size_t addrOffset, size_t ddrLen) {
-			::gateProtocolParser->ParseRoutingPackage(peer, bb, pkgOffset, pkgLen, addrOffset, ddrLen);
+		peer->OnReceiveRoutingPackage = [peer](xx::BBuffer& bb, size_t pkgOffset, size_t pkgLen, size_t addrOffset, size_t ddrLen){
+			::gateProtocolParser->ParseRoutingPackage(peer, bb, pkgOffset,pkgLen,addrOffset, ddrLen);
 		};
-	};
-	loop.Run();
-}
-void f2()
-{
-	// game server
-	xx::MemPool mp;
-	xx::UvLoop loop(&mp);
-	loop.InitTimeouter();
-	loop.InitKcpFlushInterval(10);
-	bool bRegisted = false;
-	//	
-	auto client = loop.CreateTcpClient();
-	client->SetAddress("127.0.0.1", 12346);
-	client->Connect();
-	auto timer2 = loop.CreateTimer(1000, 1000, [&loop, client, &mp, &bRegisted]()
-	{
-		if (client->state == xx::UvTcpStates::Connected) {
-			RPC::Generic::Ping_p ping;
-			mp.MPCreateTo(ping);
-			ping->ticks = time(NULL);
-			client->Send(ping);
-			//
-			if (bRegisted == false)
-			{
-				bRegisted = true;
-				RPC::Generic::ServiceInfo_p serviceInfo;
-				mp.MPCreateTo(serviceInfo);
-				serviceInfo->type = RPC::Generic::ServiceTypes::Game;
-				serviceInfo->serviceId = GAMESERVER_ID;//临时固定值
-				client->Send(serviceInfo);
-			}
-
-		}
-		if (!running) loop.Stop();
-	});
-	client->OnReceiveRequest = [client](uint32_t serial, xx::BBuffer& bb)
-	{
-	};
-	client->OnReceivePackage = [client](xx::BBuffer& bb)
-	{
-		::gameProtocolParser->Parse(client, bb);
-	};
-	client->OnReceiveRoutingPackage = [client](xx::BBuffer& bb, size_t pkgOffset, size_t pkgLen, size_t addrOffset, size_t ddrLen)
-	{
-		::gameProtocolParser->ParseRoutingPackage(client, bb, pkgOffset, pkgLen, addrOffset, ddrLen);
+		peer->OnDispose = [peer]() {
+			//Client *pClient = dynamic_cast<Client *>(peer);
+			//clientMgr->Remove(pClient);
+		};
 	};
 	loop.Run();
 }
 int main()
-{
+{	
 	//
 	xx::MemPool::RegisterInternal();
 	RPC::AllTypesRegister();
@@ -365,10 +266,6 @@ int main()
 	mp.MPCreateTo(::clientMgr);
 	mp.MPCreateTo(::gameSrvMgr);
 	mp.MPCreateTo(::gateProtocolParser);
-	mp.MPCreateTo(::gameProtocolParser);
-	//
-	std::thread t(f2);
-	t.detach();
 	f1();
 	//---------------------------------------------------
 	std::cin.get();
