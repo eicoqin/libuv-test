@@ -1,5 +1,7 @@
 ﻿#include "xx_uv.h"
 #include "RPC_class.h"
+#include <tchar.h>
+#include <atlstr.h>
 
 
 bool running = true;
@@ -12,19 +14,23 @@ const uint32_t GATESERVER_ID = 1;
 
 void f1()
 {
-	// game server
 	xx::MemPool mp;
 	xx::UvLoop loop(&mp);
 	loop.InitTimeouter();
 	loop.InitKcpFlushInterval(10);
-	bool bRegisted = false;
+	//
+	TCHAR buffer[1024] = { 0 };
+	GetModuleFileName(GetModuleHandle(NULL), buffer, sizeof(buffer));
+	CString wFileName = CString(buffer);
+	CString ROOTPATH = wFileName.Left(wFileName.ReverseFind('\\'));
+	ROOTPATH += "\\client.ini";
+	int nPort = GetPrivateProfileInt(_T("ROUTER"), _T("PORT"), 0, ROOTPATH);
 	//	
 	auto client = loop.CreateTcpClient();
-	client->SetAddress("127.0.0.1", 12345);
+	client->SetAddress("127.0.0.1", nPort);
 	client->Connect();
 	//
 	bool bLogining = false;
-
 	//
 	auto timer2 = loop.CreateTimer(1000, 1000, [&loop, client, &mp, &bLogining]()
 	{
@@ -37,7 +43,8 @@ void f1()
 				mp.MPCreateTo(login->username);
 				login->password->Assign("123");
 				login->username->Assign("123");
-				client->SendRoutePackage(login, GAMESERVER_ID, sizeof(GAMESERVER_ID));
+				xx::String gsguid(&mp,"4E156ED0-4044-4F2B-8CEF-511EAFD14EA0DF9");//
+				client->SendRouting(gsguid,login);
 				std::cout << "logining........." << std::endl;
 				//bLogining = true;
 			}
@@ -54,11 +61,11 @@ void f1()
 	client->OnDispose = [client]() {
 		std::cout << "gate disconnect....." << std::endl;
 	};
-	client->OnReceiveRequest = [&](uint32_t serial, xx::BBuffer& bb)
+	client->OnReceiveRequest = [&](uint32_t serial, xx::BBuffer& bb, uint8_t typeId)
 	{
 		std::cout << "OnReceiveRequest:" << bb << std::endl;
 	};
-	client->OnReceivePackage = [client, &bLogining](xx::BBuffer& bb) {
+	client->OnReceivePackage = [client, &bLogining](xx::BBuffer& bb, uint8_t typeId) {
 		uint32_t id = 0;
 		auto offsetbak = bb.offset;
 		bb.Read(id);
@@ -79,8 +86,7 @@ void f1()
 		}
 	};
 
-	client->OnReceiveRoutingPackage = [client, &bLogining](xx::BBuffer& bb, size_t pkgOffset, size_t pkgLen, size_t addrOffset, size_t ddrLen) {
-
+	client->OnReceiveRouting = [client, &bLogining](xx::BBuffer& bb, size_t pkgOffset, size_t pkgLen, size_t addrOffset, size_t ddrLen) {
 		uint32_t id = 0;
 		bb.Read(id);
 		switch (id)
@@ -91,7 +97,6 @@ void f1()
 			int r = bb.ReadPackage(loginAck);
 			if (r == 0) {
 				std::cout << "player login result:" << loginAck->id << std::endl;
-				//bLogining = true;
 			}
 			else
 			{

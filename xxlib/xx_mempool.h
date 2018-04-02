@@ -220,7 +220,29 @@ namespace xx
 		typedef T ChildType;
 		T* pointer;
 
+
+
 		Ptr() noexcept;
+		Ptr(Ptr const& o) noexcept;
+		Ptr(Ptr&& o) noexcept;
+		Ptr& operator=(Ptr const& o) noexcept;
+		Ptr& operator=(Ptr&& o) noexcept;
+
+
+		template<typename O>
+		Ptr(Ptr<O> const& o) noexcept;
+
+		template<typename O>
+		Ptr(Ptr<O>&& o) noexcept;
+
+		template<typename O>
+		Ptr& operator=(Ptr<O> const& o) noexcept;
+
+		template<typename O>
+		Ptr& operator=(Ptr<O>&& o) noexcept;
+
+		
+
 
 		template<typename O>
 		Ptr(O* const& pointer) noexcept;
@@ -228,27 +250,13 @@ namespace xx
 		template<typename O>
 		Ptr& operator=(O* const& o) noexcept;
 
-		Ptr(Ptr const& o) noexcept;
-
-		template<typename O>
-		Ptr(Ptr<O> const& o) noexcept;
-
-		template<typename O>
-		Ptr& operator=(Ptr<O> const& o) noexcept;
 
 
-		Ptr(Ptr&& o) noexcept;
-
-		template<typename O>
-		Ptr(Ptr<O>&& o) noexcept;
-
-		// swap
-		template<typename O>
-		Ptr& operator=(Ptr<O>&& o) noexcept;
 
 		// replace
 		template<typename O>
 		void Assign(Ptr<O>&& o) noexcept;
+
 
 		void Clear();
 		~Ptr();
@@ -343,5 +351,10 @@ namespace xx
 	constexpr bool IsRef_v = IsRef<T>::value;
 
 	typedef Ref<Object> Object_r;
+
+
+	// 增强版, 用于替代 is_trivial 的判断以实现针对 Ptr<> Ref<> 的 memcpy 操作. 未来可以继续在此加料
+	template<typename T>
+	constexpr bool IsTrivial_v = std::is_trivial<T>::value || IsPtr_v<T> || IsRef_v<T>;
 
 }

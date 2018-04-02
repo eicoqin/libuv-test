@@ -104,7 +104,7 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
-      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
@@ -169,13 +169,19 @@
     <ClInclude Include="..\xxlib\xx_hashutils.hpp" />
     <ClInclude Include="..\xxlib\xx_list.h" />
     <ClInclude Include="..\xxlib\xx_list.hpp" />
+    <ClInclude Include="..\xxlib\xx_logger.h" />
     <ClInclude Include="..\xxlib\xx_mempool.h" />
     <ClInclude Include="..\xxlib\xx_mempool.hpp" />
     <ClInclude Include="..\xxlib\xx_queue.h" />
     <ClInclude Include="..\xxlib\xx_queue.hpp" />
+    <ClInclude Include="..\xxlib\xx_sqlite.h" />
     <ClInclude Include="..\xxlib\xx_string.h" />
     <ClInclude Include="..\xxlib\xx_string.hpp" />
     <ClInclude Include="..\xxlib\xx_uv.h" />
+    <ClInclude Include="ClientParser.h" />
+    <ClInclude Include="clientservice.h" />
+    <ClInclude Include="GameServerParser.h" />
+    <ClInclude Include="Router.h" />
     <ClInclude Include="RPC_class.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
@@ -183,13 +189,18 @@
   <ItemGroup>
     <ClCompile Include="..\xxlib\ikcp.cpp" />
     <ClCompile Include="..\xxlib\xx_uv.cpp" />
+    <ClCompile Include="ClientParser.cpp" />
+    <ClCompile Include="clientservice.cpp" />
+    <ClCompile Include="GameServerParser.cpp" />
+    <ClCompile Include="main.cpp" />
+    <ClCompile Include="Router.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="test_gateway.cpp" />
+    <ClCompile Include="test_gateway.cpp.bak1" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

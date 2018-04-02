@@ -89,12 +89,13 @@ goto Label##n
 
 
 
-/***********************************************************************************/
-// Stopwatch
-/***********************************************************************************/
-
 namespace xx
 {
+
+	/***********************************************************************************/
+	// Stopwatch
+	/***********************************************************************************/
+
 	struct Stopwatch
 	{
 		Stopwatch() { Reset(); }
@@ -114,51 +115,103 @@ namespace xx
 	private:
 		std::chrono::time_point<std::chrono::high_resolution_clock> beginTime;
 	};
-}
 
 
-/************************************************************************************/
-// time_point <--> DateTime.Ticks converts
-/************************************************************************************/
+	/************************************************************************************/
+	// time_point <--> .net DateTime.Now.Ticks converts
+	/************************************************************************************/
 
-inline int64_t TimeSinceEpochToDateTimeTicks(int64_t const& val)
-{
-	return val + 621356256000000000LL;
-}
+	inline int64_t TimeSinceEpochToDateTimeTicks(int64_t const& val)
+	{
+		return val + 621356256000000000LL;
+	}
 
-inline int64_t TimePointToDateTimeTicks(std::chrono::system_clock::time_point const& val)
-{
-	return val.time_since_epoch().count() + 621356256000000000LL;
-}
+	inline int64_t TimePointToDateTimeTicks(std::chrono::system_clock::time_point const& val)
+	{
+		return val.time_since_epoch().count() + 621356256000000000LL;
+	}
 
-inline int64_t DateTimeTicksToTimeSinceEpoch(int64_t const& val)
-{
-	return val - 621356256000000000LL;
-}
+	inline int64_t DateTimeTicksToTimeSinceEpoch(int64_t const& val)
+	{
+		return val - 621356256000000000LL;
+	}
 
-inline std::chrono::system_clock::time_point TimeSinceEpochToTimePoint(int64_t const& val)
-{
-	return std::chrono::system_clock::time_point(std::chrono::system_clock::time_point::duration(val));
-}
+	inline std::chrono::system_clock::time_point TimeSinceEpochToTimePoint(int64_t const& val)
+	{
+		return std::chrono::system_clock::time_point(std::chrono::system_clock::time_point::duration(val));
+	}
 
-inline std::chrono::system_clock::time_point DateTimeTicksToTimePoint(int64_t const& val)
-{
-	return TimeSinceEpochToTimePoint(val - 621356256000000000LL);
-}
+	inline std::chrono::system_clock::time_point DateTimeTicksToTimePoint(int64_t const& val)
+	{
+		return TimeSinceEpochToTimePoint(val - 621356256000000000LL);
+	}
 
-inline std::chrono::system_clock::time_point GetNowTimePoint()
-{
-	return std::chrono::system_clock::now();
-}
+	inline std::chrono::system_clock::time_point GetNowTimePoint()
+	{
+		return std::chrono::system_clock::now();
+	}
 
-inline int64_t GetNowTimeSinceEpoch()
-{
-	return GetNowTimePoint().time_since_epoch().count();
-}
+	inline int64_t GetNowTimeSinceEpoch()
+	{
+		return GetNowTimePoint().time_since_epoch().count();
+	}
 
-inline int64_t GetNowDateTimeTicks()
-{
-	return GetNowTimeSinceEpoch() + 621356256000000000LL;
+	inline int64_t GetDateTimeNowTicks()
+	{
+		return GetNowTimeSinceEpoch() + 621356256000000000LL;
+	}
+
+
+
+	template <class T>
+	class TSingleton
+	{
+	public:
+		static bool CreateInstance()
+		{
+			if (NULL == m_poInstance)
+			{
+				m_poInstance = new T;
+			}
+			return (NULL != m_poInstance);
+		}
+
+		static T* Instance()
+		{
+			if (NULL == m_poInstance)
+			{
+				m_poInstance = new T;
+			}
+			return m_poInstance;
+		}
+
+		static T* InstanceEx()
+		{
+			if (NULL == m_poInstance)
+			{
+				m_poInstance = new T;
+			}
+			return m_poInstance;
+		}
+
+		static void DestroyInstance()
+		{
+			if (NULL != m_poInstance)
+			{
+				delete m_poInstance;
+				m_poInstance = NULL;
+			}
+		}
+
+	private:
+		static T* m_poInstance;
+	};
+
+	template<class T>
+	T* TSingleton<T>::m_poInstance = NULL;
+
+
+
 }
 
 
